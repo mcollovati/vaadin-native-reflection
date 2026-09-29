@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
 # Builds the Spring Boot and Quarkus apps as native images and runs the
 # smoke checks in each. Needs gcc and the zlib headers (build-essential,
-# zlib1g-dev on Ubuntu). Output goes to results/*.txt.
+# zlib1g-dev on Ubuntu), and JAVA_HOME must point to a GraalVM or Mandrel
+# installation. Output goes to results/*.txt.
 #
 # Usage: ./run-native.sh [spring|quarkus|all]   (default: all)
 set -u
 cd "$(dirname "$0")"
-MANDREL=${MANDREL:-$HOME/.sdkman/candidates/java/25.0.2.r25-mandrel}
-export JAVA_HOME=$MANDREL GRAALVM_HOME=$MANDREL
+
+if [[ -z ${JAVA_HOME:-} ]]; then
+    echo "JAVA_HOME is not set. Set it to a GraalVM or Mandrel installation." >&2
+    exit 1
+fi
+if [[ ! -x $JAVA_HOME/bin/native-image ]]; then
+    echo "JAVA_HOME ($JAVA_HOME) is not a GraalVM or Mandrel installation:" \
+        "$JAVA_HOME/bin/native-image not found." >&2
+    exit 1
+fi
+export GRAALVM_HOME=$JAVA_HOME
+echo ">>> Using $("$JAVA_HOME/bin/native-image" --version | head -1)"
+
 what=${1:-all}
 mkdir -p results
 

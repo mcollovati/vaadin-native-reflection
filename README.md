@@ -44,5 +44,5 @@ Results are written to `results/`.
   `-Dflow.version=...` to test another version, for example a local build.
 - The "Expected in native" column is what the code analysis predicts. It is
   not yet confirmed by a native run.
-- `run-native.sh` uses Mandrel from `$HOME/.sdkman`; set `MANDREL` to use
-  another GraalVM or Mandrel installation.
+- `run-native.sh` uses the Java in `JAVA_HOME`, and stops at once when it is
+  not a GraalVM or Mandrel installation (no `bin/native-image`).
