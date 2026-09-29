@@ -21,21 +21,28 @@ another.
 |----|------|---------------|----------------|-------------|
 | C1, C2 | Controls: `@ClientCallable` argument, app-package `@DomEvent` | PASS | PASS | - |
 | 1a-1e, 1g-1i | Binder, `setPropertyBean`, `executeJs` args, `then(Class)`, shared signals, trigger values, `BeanDataGenerator` | FAIL | FAIL | None: Flow cannot know these types at build time. Register them in the application (`@RegisterReflectionForBinding` on Spring, `@RegisterForReflection` on Quarkus). |
-| 1f | Bean type in `@EventData` | FAIL | FAIL | vaadin/flow#26040 (merged, not yet in these runs) |
+| 1f | Bean type in `@EventData` | FAIL (built without the fix) | PASS | vaadin/flow#26040 (merged) |
 | 2a, 2b | Add-on event and converter outside the app package | FAIL | FAIL | Spring: vaadin/flow#26030 (draft), plus `vaadin.allowed-packages=org.example.addon`, which this app does not set. Quarkus: index the add-on jar with `quarkus.index-dependency`. |
 | 3a | Probe: `Converter` implementation registered | PASS | FAIL | vaadin/flow#26031 (draft) |
-| 4a | Spring only: a `vaadin.*` property from `application.properties` reaches Flow (`SpringServlet.PROPERTY_NAMES` uses `InitParameters.class.getDeclaredFields()`) | FAIL | - | vaadin/flow#26039 (draft). Still FAIL with it, see below. |
+| 4a | Spring only: a `vaadin.*` property from `application.properties` reaches Flow | PASS (with the fix) | - | vaadin/flow#26039 (draft) |
 
-Latest run: 2026-09-29, GraalVM CE 25.2.4 (JDK 25.0.4), Flow
+Latest runs: 2026-09-29, GraalVM CE 25.2.4 (JDK 25.0.4), Flow
 25.4-SNAPSHOT, Spring Boot 4.1.1 and Quarkus 3.33.0. On the JVM, all
 checks pass.
 
-- The Spring run used `vaadin-spring` with vaadin/flow#26039. Check 4a
-  still failed: the fix registers `InitParameters` with
-  `"allPublicFields": true`, but `getDeclaredFields()` needs the declared
-  fields to be registered.
-- None of the runs included vaadin/flow#26030, #26031 or #26040, so 1f,
-  2a, 2b and 3a show the behaviour before those fixes.
+- The Spring run used `vaadin-spring` from the vaadin/flow#26039 branch,
+  which was made before vaadin/flow#26040 was merged. So 4a passes and 1f
+  still fails there. The Quarkus run included vaadin/flow#26040.
+- Check 4a needed two hints. `SpringServlet.PROPERTY_NAMES` reads the
+  constants of `InitParameters` with `getDeclaredFields()`, which needs its
+  declared fields registered. And `LookupServletContainerInitializer` only
+  keeps a `LookupInitializer` whose public constructor it can see with
+  `getConstructors()`: without a hint for `SpringLookupInitializer`, Flow
+  used its default lookup, which ignores Spring beans and so the Spring
+  configuration factory. When 4a fails, its message shows each of these
+  steps.
+- None of the runs included vaadin/flow#26030 or #26031, so 2a, 2b and 3a
+  show the behaviour before those fixes.
 
 ## Run
 
