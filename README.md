@@ -17,17 +17,25 @@ fired on the element's listener map, and `then(Class)` is checked through
 bean class, so that the registration for one check cannot hide a failure in
 another.
 
-| Id | What | Spring native | Quarkus native |
-|----|------|---------------|----------------|
-| C1, C2 | Controls: `@ClientCallable` argument, app-package `@DomEvent` | PASS | PASS |
-| 1a-1i | Binder, `setPropertyBean`, `executeJs` args, `then(Class)`, bean `@EventData`, shared signals, trigger values, `BeanDataGenerator` | FAIL | FAIL |
-| 2a, 2b | Add-on event and converter outside the app package (Spring: vaadin/flow#26030; Quarkus: the add-on jar has no Jandex index) | FAIL | FAIL |
-| 3a | Probe: `Converter` implementation registered (Quarkus: vaadin/flow#26031) | PASS | FAIL |
-| 4a | Spring only: a `vaadin.*` property from `application.properties` reaches Flow (`SpringServlet.PROPERTY_NAMES` uses `InitParameters.class.getDeclaredFields()`) | FAIL | - |
+| Id | What | Spring native | Quarkus native | Fix in Flow |
+|----|------|---------------|----------------|-------------|
+| C1, C2 | Controls: `@ClientCallable` argument, app-package `@DomEvent` | PASS | PASS | - |
+| 1a-1e, 1g-1i | Binder, `setPropertyBean`, `executeJs` args, `then(Class)`, shared signals, trigger values, `BeanDataGenerator` | FAIL | FAIL | None: Flow cannot know these types at build time. Register them in the application (`@RegisterReflectionForBinding` on Spring, `@RegisterForReflection` on Quarkus). |
+| 1f | Bean type in `@EventData` | FAIL | FAIL | vaadin/flow#26040 (merged, not yet in these runs) |
+| 2a, 2b | Add-on event and converter outside the app package | FAIL | FAIL | Spring: vaadin/flow#26030 (draft), plus `vaadin.allowed-packages=org.example.addon`, which this app does not set. Quarkus: index the add-on jar with `quarkus.index-dependency`. |
+| 3a | Probe: `Converter` implementation registered | PASS | FAIL | vaadin/flow#26031 (draft) |
+| 4a | Spring only: a `vaadin.*` property from `application.properties` reaches Flow (`SpringServlet.PROPERTY_NAMES` uses `InitParameters.class.getDeclaredFields()`) | FAIL | - | vaadin/flow#26039 (draft). Still FAIL with it, see below. |
 
-Results with GraalVM CE 25.2.4 (JDK 25.0.4), Flow 25.4-SNAPSHOT of
-2026-09-29, Spring Boot 4.1.1 and Quarkus 3.33.0. On the JVM, all checks
-pass.
+Latest run: 2026-09-29, GraalVM CE 25.2.4 (JDK 25.0.4), Flow
+25.4-SNAPSHOT, Spring Boot 4.1.1 and Quarkus 3.33.0. On the JVM, all
+checks pass.
+
+- The Spring run used `vaadin-spring` with vaadin/flow#26039. Check 4a
+  still failed: the fix registers `InitParameters` with
+  `"allPublicFields": true`, but `getDeclaredFields()` needs the declared
+  fields to be registered.
+- None of the runs included vaadin/flow#26030, #26031 or #26040, so 1f,
+  2a, 2b and 3a show the behaviour before those fixes.
 
 ## Run
 
