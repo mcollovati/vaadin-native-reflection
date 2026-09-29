@@ -25,22 +25,37 @@ mkdir -p results
 
 mvn -q install -N && mvn -q install -pl addon,checks || exit 1
 
+# Builds one app and runs its native binary.
+#   $1: name used for the files in results/
+#   $2: app directory
+#   $3: path of the native binary
+#   rest: Maven arguments for the native build
+build_and_run() {
+    local name=$1 dir=$2 binary=$3
+    shift 3
+    echo ">>> $name native build (log: results/$name-build.log)"
+    if ! (cd "$dir" && mvn "$@") > "results/$name-build.log" 2>&1; then
+        echo "!!! $name native build failed, see results/$name-build.log"
+        return
+    fi
+    echo ">>> Running $binary (log: results/$name-run.log)"
+    "./$binary" > "results/$name-run.log" 2>&1
+    sed -n '/==== Flow native/,/checks failed ====/p' "results/$name-run.log" \
+        > "results/$name-native.txt"
+    if [[ -s results/$name-native.txt ]]; then
+        cat "results/$name-native.txt"
+    else
+        echo "!!! $name did not run the checks, see results/$name-run.log"
+    fi
+}
+
 if [[ $what == all || $what == spring ]]; then
-    echo ">>> Spring Boot native build (log: results/spring-build.log)"
-    (cd spring-app && mvn -Pnative native:compile -DskipTests) \
-        > results/spring-build.log 2>&1 \
-        && ./spring-app/target/spring-app 2>&1 \
-            | sed -n '/==== Flow native/,/checks failed ====/p' \
-            | tee results/spring-native.txt \
-        || echo "Spring build or run failed, see results/spring-build.log"
+    build_and_run spring spring-app spring-app/target/spring-app \
+        -Pnative native:compile -DskipTests
 fi
 
 if [[ $what == all || $what == quarkus ]]; then
-    echo ">>> Quarkus native build (log: results/quarkus-build.log)"
-    (cd quarkus-app && mvn package -DskipTests -Dquarkus.native.enabled=true) \
-        > results/quarkus-build.log 2>&1 \
-        && ./quarkus-app/target/quarkus-app-1.0-SNAPSHOT-runner 2>&1 \
-            | sed -n '/==== Flow native/,/checks failed ====/p' \
-            | tee results/quarkus-native.txt \
-        || echo "Quarkus build or run failed, see results/quarkus-build.log"
+    build_and_run quarkus quarkus-app \
+        quarkus-app/target/quarkus-app-1.0-SNAPSHOT-runner \
+        package -DskipTests -Dquarkus.native.enabled=true
 fi

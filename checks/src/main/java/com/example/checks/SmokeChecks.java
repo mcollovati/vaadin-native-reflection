@@ -35,10 +35,15 @@ public final class SmokeChecks {
             boolean passed, String detail) {
     }
 
+    /** A check. */
     @FunctionalInterface
-    private interface Check {
+    public interface Check {
         /** Returns null when the check passed, or a failure message. */
         String run() throws Exception;
+    }
+
+    /** A check that only one integration can run, added after the others. */
+    public record Extra(String id, String feature, Check check) {
     }
 
     private final List<Result> results = new ArrayList<>();
@@ -47,13 +52,18 @@ public final class SmokeChecks {
     }
 
     /**
-     * Runs all checks.
+     * Runs all checks, then the given extra checks.
      *
+     * @param extras
+     *            checks that only the calling integration can run
      * @return the results, in a fixed order
      */
-    public static List<Result> runAll() {
+    public static List<Result> runAll(List<Extra> extras) {
         SmokeChecks checks = new SmokeChecks();
         checks.runChecks();
+        for (Extra extra : extras) {
+            checks.check(extra.id(), extra.feature(), false, extra.check());
+        }
         return checks.results;
     }
 
@@ -65,7 +75,20 @@ public final class SmokeChecks {
      * @return the number of failed checks
      */
     public static int runAndPrint(String runtime) {
-        List<Result> results = runAll();
+        return runAndPrint(runtime, List.of());
+    }
+
+    /**
+     * Prints the results as a table and returns the number of failed checks.
+     *
+     * @param runtime
+     *            a label for the runtime, printed in the header
+     * @param extras
+     *            checks that only the calling integration can run
+     * @return the number of failed checks
+     */
+    public static int runAndPrint(String runtime, List<Extra> extras) {
+        List<Result> results = runAll(extras);
         boolean nativeImage = System
                 .getProperty("org.graalvm.nativeimage.imagecode") != null;
         StringBuilder out = new StringBuilder();

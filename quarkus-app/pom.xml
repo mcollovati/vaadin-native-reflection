@@ -12,7 +12,9 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <flow.version>25.4-SNAPSHOT</flow.version>
-        <quarkus.version>3.33.4</quarkus.version>
+        <quarkus.version>3.33.0</quarkus.version>
+        <!-- The Vaadin build step needs the workspace to find the project. -->
+        <quarkus.bootstrap.workspace-discovery>true</quarkus.bootstrap.workspace-discovery>
     </properties>
 
     <repositories>
@@ -58,6 +60,10 @@
         <dependency>
             <groupId>com.vaadin</groupId>
             <artifactId>flow-data</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>flow-client</artifactId>
         </dependency>
     </dependencies>
 
